@@ -89,6 +89,7 @@ Download the files in this repo and navigate to the extracted folder, first into
 ![Screenshot of Grafana dashboard](/big_screenshot.png?raw=true)
 
 
+<<<<<<< HEAD
 ## Quickstart
 
 ```
