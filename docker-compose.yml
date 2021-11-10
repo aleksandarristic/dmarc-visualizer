@@ -1,11 +1,11 @@
-version: '3.5'
+version: '3.6'
 services:
   parsedmarc:
     build: ./parsedmarc/
     volumes:
       - ./files:/input:ro
       - ./output_files:/output
-    command: parsedmarc -c /parsedmarc.ini /input/*
+    command: parsedmarc -c /parsedmarc.ini /input/* --log-file /output/parsedmarc.log
     depends_on:
       - elasticsearch
     restart: on-failure
