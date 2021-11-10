@@ -6,4 +6,5 @@ RUN apk add --update --no-cache --virtual .build_deps build-base \
     && apk del .build_deps
 
 COPY parsedmarc.ini /
+RUN mkdir /usr/share/GeoIP
 COPY GeoLite2-Country.mmdb /usr/share/GeoIP/GeoLite2-Country.mmdb
