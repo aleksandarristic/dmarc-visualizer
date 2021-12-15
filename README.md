@@ -7,7 +7,6 @@ Analyse and visualize DMARC results using open-source tools.
 * [Grafana](https://grafana.com/) to visualize the aggregated reports.
 
 
-
 ## Screenshot
 
 ![Screenshot of Grafana dashboard](/big_screenshot.png?raw=true)
@@ -22,6 +21,10 @@ docker-compose -f ./docker-compose.yml --verbose up
 ```
 
 And then visit http://localhost:3000
+
+
+### Note on GeoIP information:
+In order to have the geoip data populated and visible on the map in the dashboard, you will need to visit https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en and get your own `GeoLite2-Country.mmdb` file, then put it in the `parsedmarc` directory before running docker-compose.
 
 
 ## Thanks:
