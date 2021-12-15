@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 FROM python:3.11-alpine3.18
 
 RUN apk add --update --no-cache build-base libxml2-dev libxslt-dev libffi-dev git

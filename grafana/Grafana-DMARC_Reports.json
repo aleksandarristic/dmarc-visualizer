@@ -4327,7 +4327,7 @@
     ]
   },
   "time": {
-    "from": "now-30d",
+    "from": "2020-12-24",
     "to": "now"
   },
   "timepicker": {
