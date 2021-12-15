@@ -1,4 +1,4 @@
-FROM python:3.7-alpine
+FROM python:3.9-alpine3.14
 
 RUN apk add --update --no-cache build-base libxml2-dev libxslt-dev
 RUN apk add --update --no-cache --virtual .build_deps build-base \
