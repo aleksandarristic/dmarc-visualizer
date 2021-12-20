@@ -17,10 +17,19 @@ Analyse and visualize DMARC results using open-source tools.
 ```
 git clone https://github.com/aleksandarristic/dmarc-visualiser
 cd dmarc-visualiser
-docker-compose -f ./docker-compose.yml --verbose up
+./start.sh
 ```
 
-And then visit http://localhost:3000
+The ```start.sh``` bash scripts runs the containers in the detached mode (in background). After you start the containers, visit http://localhost:3000 to browse.
+
+To stop all containers, run ```./stop.sh``` (or manually ```docker-compose down```).
+
+In case you don't want to run in the detached mode, you can always specify the full docker compose command line to run the docker-compose yourself:
+
+```
+cd dmarc-visualiser/
+docker-compose -f ./docker-compose.yml --verbose up
+```
 
 
 ### Note on GeoIP information:
