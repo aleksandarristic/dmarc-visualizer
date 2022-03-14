@@ -58,7 +58,7 @@ def should_move(file_name, days_to_keep):
     from_time = datetime.utcfromtimestamp(int(matches.groupdict()['from']))
     file_day = datetime.date(from_time)
 
-    if today - file_day < timedelta(days=days_to_keep):
+    if today - file_day < timedelta(days=int(days_to_keep)):
         return False
 
     return True
