@@ -5,7 +5,7 @@ import imaplib
 import os
 import json
 import logging
-from telnetlib import DO, SE
+
 
 log = logging.getLogger(__name__)
 
