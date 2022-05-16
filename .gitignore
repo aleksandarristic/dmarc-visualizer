@@ -4,3 +4,5 @@
 .DS_Store
 .old
 archive_files.log
+fetch_attachments_config.json
+fetch_attachments.log

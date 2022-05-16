@@ -1,0 +1,15 @@
+{
+    "auth": {
+        "server": "server address",
+        "username": "imap username",
+        "password": "imap password"
+    },
+    "filter": {
+        "label": "label/inbox to select",
+        "to": "sender address"
+    },
+    "local": {
+        "directory": "directory to save attachments",
+        "overwrite": true
+    }
+}
