@@ -1,4 +1,5 @@
-FROM grafana/grafana:8.5.27
+#FROM grafana/grafana:8.5.6
+FROM grafana/grafana:9.5.3
 
 ADD --chown=grafana:root Grafana-DMARC_Reports.json /var/lib/grafana/dashboards/
 RUN chmod 644 /etc/grafana/provisioning
