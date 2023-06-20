@@ -9,15 +9,15 @@ import logging
 
 log = logging.getLogger(__name__)
 
-# M.search(None, '(SINCE "01-Jan-2012")')
-# M.search(None, '(BEFORE "01-Jan-2012")')
-# M.search(None, '(SINCE "01-Jan-2012" BEFORE "02-Jan-2012")')
-
 
 def parse_args():
     parser = argparse.ArgumentParser(description=f'Fetch attachments of emails under specific label')
-    parser.add_argument('--id', dest='email_ids', nargs='*', help='Optional email IDs')
-    parser.set_defaults(email_ids=None)
+    parser.add_argument('--id', dest='email_ids', nargs='*', default=None, help='Optional email IDs')
+    parser.add_argument('--since', dest='since', default=None, help='Date to search from (eg: 01-Jan-2020)')
+    parser.add_argument('--before', dest='before', default=None, help='Date to search until (eg: 01-Jan-2022)')
+    parser.add_argument('--seen', dest='seen', default=False, action='store_true', help='Include read emails.')
+
+    parser.add_argument('--debug', dest='debug', default=False, action='store_true', help='Debug mode.')
     args = parser.parse_args()
     return args
 
@@ -42,7 +42,7 @@ def load_config(config_file='fetch_attachments_config.json'):
     return cfg
 
 
-def configure_logging(verbose):
+def configure_logging(verbose, debug=False):
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
@@ -54,7 +54,7 @@ def configure_logging(verbose):
         handlers.append(logging.StreamHandler(sys.stdout))
 
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO if not debug else logging.DEBUG,
         format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S',
         handlers=handlers
     )
@@ -68,6 +68,7 @@ def get_mail_by_id(email_id, client, cfg):
 
     log.info('Parsing email "' + message['Subject'] + '"')
 
+    part_counter = 0
     for part in message.walk():
         # skip multipart containers
         if part.get_content_maintype() == 'multipart':
@@ -80,10 +81,8 @@ def get_mail_by_id(email_id, client, cfg):
         filename = part.get_filename()
 
         # safety for attachments without filename
-        counter = 1
         if not filename:
-            filename = 'part-%03d%s' % (counter, 'bin')
-            counter += 1
+            filename = 'id_%s_part-%03d%s' % (email_id, ++part_counter, '.bin')
 
         attachment_path = os.path.join(cfg['download_dir'], filename)
 
@@ -94,9 +93,30 @@ def get_mail_by_id(email_id, client, cfg):
             log.info('Attachment saved.')
 
 
+def build_query(seen=False, since=None, before=None, to=None):
+    q = []
+    if since:
+        q.append('SINCE')
+        q.append(since)
+
+    if before:
+        q.append('BEFORE')
+        q.append(before)
+
+    if not seen:
+        q.append('UNSEEN')
+
+    if to:
+        q.append('TO')
+        q.append(to)
+
+    return tuple(q)
+
+
 def main():
-    configure_logging(verbose=True)
     args = parse_args()
+    configure_logging(verbose=True, debug=args.debug)
+
     try:
         cfg = load_config()
     except ValueError as e:
@@ -111,15 +131,17 @@ def main():
     except Exception as e:
         log.error(f'ERROR LOGGING IN: {e}')
         quit(-1)
-    log.info('Login Success!')
+    log.debug('Login Success!')
 
     client.select(cfg['label'])
 
-    if args.email_ids:
+    if args.email_ids:  # extract specific emails by email_id, no need for search
         email_ids = args.email_ids
-    else:
-        resp_code, email_ids = client.search(None, 'UNSEEN', 'TO', cfg['to'])
-        email_ids = email_ids[0].split()  # getting the mails id
+    else:  # build a query and run a search
+        query = build_query(seen=args.seen, since=args.since, before=args.before, to=cfg['to'])
+        log.debug(f'Generated query: {query}')
+        resp_code, email_ids = client.search(None, *query)
+        email_ids = [a.decode() for a in email_ids[0].split()]  # getting the mails id
 
     if not email_ids:
         log.info('No unseen emails detected.')
