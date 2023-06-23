@@ -96,13 +96,13 @@ def get_mail_by_id(email_id, client, cfg):
 
         if not os.path.isfile(attachment_path) or cfg['overwrite']:
             log.info(f'Saving attachment to {attachment_path}...')
-            with open(attachment_path, 'wb') as f:
-                payload = part.get_payload(decode=True)
-                if is_bin(payload):
+            payload = part.get_payload(decode=True)
+            if is_bin(payload):
+                with open(attachment_path, 'wb') as f:
                     f.write(payload)
                     log.info('Attachment saved.')
-                else:
-                    log.info('Attachment is text, skipped')
+            else:
+                log.info('Attachment is text, skipped')
 
 
 def build_query(seen=False, since=None, before=None, to=None):
