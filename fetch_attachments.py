@@ -9,6 +9,14 @@ import logging
 
 log = logging.getLogger(__name__)
 
+text_chars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7f})
+
+
+def is_bin(chars) -> bool:
+    if len(chars) >= 1024:
+        chars = chars[:1024]
+    return bool(chars.translate(None, text_chars))
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description=f'Fetch attachments of emails under specific label')
@@ -89,8 +97,12 @@ def get_mail_by_id(email_id, client, cfg):
         if not os.path.isfile(attachment_path) or cfg['overwrite']:
             log.info(f'Saving attachment to {attachment_path}...')
             with open(attachment_path, 'wb') as f:
-                f.write(part.get_payload(decode=True))
-            log.info('Attachment saved.')
+                payload = part.get_payload(decode=True)
+                if is_bin(payload):
+                    f.write(payload)
+                    log.info('Attachment saved.')
+                else:
+                    log.info('Attachment is text, skipped')
 
 
 def build_query(seen=False, since=None, before=None, to=None):
