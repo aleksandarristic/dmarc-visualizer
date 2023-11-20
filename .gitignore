@@ -1,0 +1,10 @@
+/files/
+/output_files/
+/parsedmarc/GeoLite2-Country*
+.DS_Store
+.old
+archive_files.log
+fetch_attachments_config.json
+fetch_attachments.log
+/.idea/
+.venv

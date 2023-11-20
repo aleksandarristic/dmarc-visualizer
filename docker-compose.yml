@@ -1,0 +1,41 @@
+version: '3.6'
+services:
+  parsedmarc:
+    build: ./parsedmarc/
+    volumes:
+      - ./files:/input:ro
+      - ./output_files:/output
+    command: parsedmarc -c /parsedmarc.ini /input/* --log-file /output/parsedmarc.log
+    depends_on:
+      elasticsearch:
+         condition: service_healthy
+    restart: always
+
+  elasticsearch:
+    build: ./elasticsearch/
+    environment:
+      - cluster.name=parsedmarc
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false # required to prevent warnings in kibana dashboard. Security is not required as we're only operating docker-internally
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: always
+    healthcheck:
+      test: [ "CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health" ]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  grafana:
+    build: ./grafana/
+    ports:
+      - 3000:3000
+    user: root
+    environment:
+      GF_INSTALL_PLUGINS: grafana-piechart-panel,grafana-worldmap-panel
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
