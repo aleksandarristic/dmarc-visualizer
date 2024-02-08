@@ -4,7 +4,7 @@ import argparse
 import logging
 import shutil
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import re
 
 
@@ -54,8 +54,8 @@ def should_move(file_name, days_to_keep):
         log.warning(f'Match for file "{file_name}" not found.')
         return False
 
-    today = datetime.date(datetime.utcnow())
-    from_time = datetime.utcfromtimestamp(int(matches.groupdict()['from']))
+    today = datetime.date(datetime.now(UTC))
+    from_time = datetime.fromtimestamp(int(matches.groupdict()['from']), UTC)
     file_day = datetime.date(from_time)
 
     if today - file_day < timedelta(days=int(days_to_keep)):
