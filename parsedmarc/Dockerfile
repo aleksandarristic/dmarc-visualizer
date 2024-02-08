@@ -2,7 +2,7 @@ FROM python:3.11-alpine3.18
 
 RUN apk add --update --no-cache build-base libxml2-dev libxslt-dev libffi-dev git
 RUN apk add --update --no-cache --virtual .build_deps build-base \
-    && pip3 install -U git+https://github.com/domainaware/parsedmarc.git \
+    && pip3 install -U git+https://github.com/domainaware/parsedmarc.git msgraph-core==0.2.2 \
     && apk del .build_deps
 
 COPY parsedmarc.ini /
