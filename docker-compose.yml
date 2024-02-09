@@ -9,7 +9,7 @@ services:
     depends_on:
       elasticsearch:
          condition: service_healthy
-    restart: always
+    restart: unless-stopped
 
   elasticsearch:
     build: ./elasticsearch/
@@ -23,7 +23,7 @@ services:
       memlock:
         soft: -1
         hard: -1
-    restart: always
+    restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl","-s" ,"-f", "http://localhost:9200/_cat/health" ]
       interval: 1m
