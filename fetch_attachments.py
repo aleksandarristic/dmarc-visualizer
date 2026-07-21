@@ -2,20 +2,13 @@
 
 import argparse
 import email
+import email.header
 import imaplib
 import os
 import json
 import logging
 
 log = logging.getLogger(__name__)
-
-text_chars = bytearray({7, 8, 9, 10, 12, 13, 27} | set(range(0x20, 0x100)) - {0x7f})
-
-
-def is_bin(chars) -> bool:
-    if len(chars) >= 1024:
-        chars = chars[:1024]
-    return bool(chars.translate(None, text_chars))
 
 
 def parse_args():
@@ -68,15 +61,37 @@ def configure_logging(verbose, debug=False):
     )
 
 
-def get_mail_by_id(email_id, client, cfg):
-    log.info(f'Working on email id {email_id}')
-    resp_code, data = client.fetch(email_id, "(RFC822)")
-    email_body = data[0][1]  # hackity hack - unsafe
-    message = email.message_from_bytes(email_body)
+def decode_subject(message):
+    """Return a readable Subject, or '(no subject)' when absent/undecodable."""
+    raw = message.get('Subject')
+    if not raw:
+        return '(no subject)'
+    try:
+        return str(email.header.make_header(email.header.decode_header(raw)))
+    except Exception:
+        return str(raw)
 
-    log.info('Parsing email "' + message['Subject'] + '"')
 
-    part_counter = 0
+def safe_filename(filename, email_id, part_index):
+    """Sanitize an attachment filename to a bare basename, generating one if missing.
+
+    Strips any directory components so a crafted name (e.g. '../../x') cannot
+    escape the download directory.
+    """
+    if filename:
+        filename = os.path.basename(filename)
+    if not filename:
+        filename = 'id_%s_part-%03d.bin' % (email_id, part_index)
+    return filename
+
+
+def extract_attachments(message, email_id):
+    """Yield (filename, payload_bytes) for every attachment part of a message.
+
+    Handles emails with multiple attachments and parts that lack a filename.
+    Parts with no decodable payload are skipped rather than crashing the run.
+    """
+    part_index = 0
     for part in message.walk():
         # skip multipart containers
         if part.get_content_maintype() == 'multipart':
@@ -86,23 +101,47 @@ def get_mail_by_id(email_id, client, cfg):
         if part.get('Content-Disposition') is None:
             continue
 
-        filename = part.get_filename()
+        part_index += 1
+        filename = safe_filename(part.get_filename(), email_id, part_index)
 
-        # safety for attachments without filename
-        if not filename:
-            filename = 'id_%s_part-%03d%s' % (email_id, ++part_counter, '.bin')
+        payload = part.get_payload(decode=True)
+        if payload is None:
+            log.warning(f'Attachment "{filename}" (email {email_id}) has no decodable payload, skipping.')
+            continue
 
-        attachment_path = os.path.join(cfg['download_dir'], filename)
+        yield filename, payload
 
-        if not os.path.isfile(attachment_path) or cfg['overwrite']:
-            log.info(f'Saving attachment to {attachment_path}...')
-            payload = part.get_payload(decode=True)
-            if is_bin(payload):
-                with open(attachment_path, 'wb') as f:
-                    f.write(payload)
-                    log.info('Attachment saved.')
-            else:
-                log.info('Attachment is text, skipped')
+
+def save_attachment(payload, path, overwrite):
+    """Write payload to path. Returns True if written, False if skipped."""
+    if os.path.isfile(path) and not overwrite:
+        log.info(f'Attachment already exists at {path}, skipping (overwrite disabled).')
+        return False
+    log.info(f'Saving attachment to {path}...')
+    with open(path, 'wb') as f:
+        f.write(payload)
+    log.info('Attachment saved.')
+    return True
+
+
+def get_mail_by_id(email_id, client, cfg):
+    log.info(f'Working on email id {email_id}')
+    resp_code, data = client.fetch(email_id, "(RFC822)")
+
+    # Guard the FETCH response shape: expect [(b'... (RFC822 {n}', b'<raw>'), ...]
+    if resp_code != 'OK' or not data or not isinstance(data[0], (tuple, list)) or len(data[0]) < 2:
+        log.error(f'Unexpected FETCH response for email {email_id}: {resp_code!r}')
+        return 0
+
+    message = email.message_from_bytes(data[0][1])
+    log.info('Parsing email "%s"' % decode_subject(message))
+
+    saved = 0
+    for filename, payload in extract_attachments(message, email_id):
+        path = os.path.join(cfg['download_dir'], filename)
+        if save_attachment(payload, path, cfg['overwrite']):
+            saved += 1
+    return saved
 
 
 def build_query(seen=False, since=None, before=None, to=None):
@@ -145,7 +184,10 @@ def main():
         quit(-1)
     log.debug('Login Success!')
 
-    client.select(cfg['label'])
+    resp_code, select_data = client.select(cfg['label'])
+    if resp_code != 'OK':
+        log.error(f'Could not select mailbox/label "{cfg["label"]}": {select_data}')
+        quit(-1)
 
     if args.email_ids:  # extract specific emails by email_id, no need for search
         email_ids = args.email_ids
@@ -156,12 +198,17 @@ def main():
         email_ids = [a.decode() for a in email_ids[0].split()]  # getting the mails id
 
     if not email_ids:
-        log.info('No unseen emails detected.')
+        log.info('No matching emails detected.')
     else:
         log.info(f'Downloading emails with ids: {", ".join(map(str, email_ids))}')
 
+        total_saved = 0
         for email_id in email_ids:
-            get_mail_by_id(email_id, client, cfg=cfg)
+            try:
+                total_saved += get_mail_by_id(email_id, client, cfg=cfg)
+            except Exception as e:
+                log.error(f'Error processing email {email_id}: {e}')
+        log.info(f'Saved {total_saved} attachment(s) from {len(email_ids)} email(s).')
     log.info('All done!')
 
 
