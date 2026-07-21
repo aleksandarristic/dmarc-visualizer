@@ -11,5 +11,9 @@
     "local": {
         "directory": "directory to save attachments",
         "overwrite": true
+    },
+    "report": {
+        "directory": "reports",
+        "es_url": "http://localhost:9200"
     }
 }

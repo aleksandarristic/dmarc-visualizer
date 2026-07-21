@@ -7,6 +7,8 @@
 archive_files.log
 fetch_attachments_config.json
 fetch_attachments.log
+weekly_report.log
+/reports/
 /.idea/
 .venv/
 __pycache__/

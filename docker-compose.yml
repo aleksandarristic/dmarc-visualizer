@@ -13,6 +13,8 @@ services:
 
   elasticsearch:
     build: ./elasticsearch/
+    ports:
+      - 127.0.0.1:9200:9200   # host-only, for weekly_report.py
     volumes:
       - ./elastic_data:/usr/share/elasticsearch/data
     environment:
